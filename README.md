@@ -1,14 +1,19 @@
 # CRM Pos-Venda WM Energia Solar
 
-Primeira versao publicavel do CRM de pos-venda da WM Energia Solar.
+Versao funcional inicial do CRM de pos-venda da WM Energia Solar.
 
 ## O que tem aqui
 
-- Painel visual para fila de atendimentos de pos-venda
-- Cards de metricas
-- Lista de chamados
-- Detalhe do atendimento com resumo da IA
-- Base pronta para evoluir para WhatsApp, banco de dados e login
+- Painel de fila de atendimentos de pos-venda
+- Cards de metricas calculados pelos tickets
+- Busca por cliente, telefone, cidade, assunto e mensagem
+- Filtro por status
+- Criacao manual de novo atendimento
+- Edicao de status, prioridade, responsavel, resumo da IA e proxima acao
+- Historico resumido de eventos por atendimento
+- Botao para abrir WhatsApp quando o telefone esta cadastrado
+- Exportacao CSV
+- Persistencia local via `localStorage` do navegador
 
 ## Como publicar no Vercel
 
@@ -20,9 +25,13 @@ Primeira versao publicavel do CRM de pos-venda da WM Energia Solar.
 6. Output directory: deixe vazio.
 7. Clique em **Deploy**.
 
+## Observacao importante
+
+Nesta fase, os dados ficam salvos no navegador de quem usa o CRM. Isso ja permite operar e testar o fluxo, mas ainda nao e banco compartilhado entre operadores.
+
 ## Proxima fase
 
-Transformar esta demo em app funcional com:
+Transformar em app multiusuario com:
 
 - Next.js
 - Supabase/Postgres

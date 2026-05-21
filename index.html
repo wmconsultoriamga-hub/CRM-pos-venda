@@ -441,6 +441,64 @@
       padding-top: 2px;
     }
 
+    .empty-state {
+      padding: 28px 16px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .modal[hidden] { display: none; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(12, 23, 38, .56);
+    }
+
+    .modal-box {
+      width: min(760px, 100%);
+      max-height: min(780px, calc(100vh - 36px));
+      overflow: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: 0 26px 70px rgba(10, 18, 30, .25);
+    }
+
+    .modal-form {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 30;
+      max-width: 360px;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      background: #0c1726;
+      color: white;
+      box-shadow: var(--shadow);
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     @media (max-width: 1040px) {
       .app { grid-template-columns: 1fr; }
       .sidebar {
@@ -508,16 +566,16 @@
           <p class="subtitle">Tickets criados pelo agente IA quando precisa de suporte humano.</p>
         </div>
         <div class="actions">
-          <button class="btn">Exportar</button>
-          <button class="btn primary">Novo atendimento</button>
+          <button class="btn" id="exportCsv">Exportar</button>
+          <button class="btn primary" id="openNewTicket">Novo atendimento</button>
         </div>
       </header>
 
-      <section class="metrics">
-        <article class="metric"><span>Novos</span><strong>12</strong><small>aguardando operador</small></article>
-        <article class="metric"><span>Em atendimento</span><strong>8</strong><small>com responsável definido</small></article>
-        <article class="metric"><span>Urgentes</span><strong>3</strong><small>risco elétrico ou cliente crítico</small></article>
-        <article class="metric"><span>Resolvidos hoje</span><strong>21</strong><small>tempo médio 18 min</small></article>
+      <section class="metrics" id="metrics">
+        <article class="metric"><span>Novos</span><strong>0</strong><small>aguardando operador</small></article>
+        <article class="metric"><span>Em atendimento</span><strong>0</strong><small>com responsável definido</small></article>
+        <article class="metric"><span>Urgentes</span><strong>0</strong><small>risco elétrico ou cliente crítico</small></article>
+        <article class="metric"><span>Resolvidos hoje</span><strong>0</strong><small>atualizados no navegador</small></article>
       </section>
 
       <section class="workspace">
@@ -527,9 +585,9 @@
             <span class="badge blue">Tempo real</span>
           </div>
           <div class="search">
-            <input type="search" value="" placeholder="Buscar cliente, telefone ou cidade">
-            <select>
-              <option>Todos status</option>
+            <input id="searchInput" type="search" value="" placeholder="Buscar cliente, telefone ou cidade">
+            <select id="statusFilter">
+              <option value="Todos status">Todos status</option>
               <option>Novo</option>
               <option>Em atendimento</option>
               <option>Aguardando cliente</option>
@@ -537,139 +595,454 @@
             </select>
           </div>
 
-          <div class="ticket-list">
-            <div class="ticket active">
-              <div class="ticket-top">
-                <strong>Ronaldo Pereira da Silva</strong>
-                <span class="badge red">Urgente</span>
-              </div>
-              <p>Troca de internet, sem acesso ao app. Precisa orientação de reconexão do inversor Sofar.</p>
-              <div class="badges">
-                <span class="badge blue">Suporte técnico</span>
-                <span class="badge orange">Aguardando operador</span>
-                <span class="badge">Sarandi/PR</span>
-              </div>
-            </div>
-
-            <div class="ticket">
-              <div class="ticket-top">
-                <strong>Thiago Aparecido Veloso</strong>
-                <span class="badge orange">Alta</span>
-              </div>
-              <p>Cliente pediu acesso ao monitoramento. IA solicitou validação de CPF/telefone antes de seguir.</p>
-              <div class="badges">
-                <span class="badge blue">Aplicativo</span>
-                <span class="badge green">Validando identidade</span>
-                <span class="badge">Sarandi/PR</span>
-              </div>
-            </div>
-
-            <div class="ticket">
-              <div class="ticket-top">
-                <strong>Regina Galeriani</strong>
-                <span class="badge">Normal</span>
-              </div>
-              <p>Baixa geração informada. Cliente ainda não enviou print do aplicativo.</p>
-              <div class="badges">
-                <span class="badge blue">Baixa geração</span>
-                <span class="badge">Aguardando cliente</span>
-                <span class="badge">Apucarana/PR</span>
-              </div>
-            </div>
-
-            <div class="ticket">
-              <div class="ticket-top">
-                <strong>Jucelino Camilo de Morais</strong>
-                <span class="badge">Normal</span>
-              </div>
-              <p>Dúvida sobre homologação e concessionária. Cadastro localizado pela IA.</p>
-              <div class="badges">
-                <span class="badge blue">Homologação</span>
-                <span class="badge orange">Novo</span>
-                <span class="badge">Itaquiraí/MS</span>
-              </div>
-            </div>
-          </div>
+          <div class="ticket-list" id="ticketList"></div>
         </article>
 
         <article class="panel">
           <div class="panel-head">
             <h2 class="panel-title">Detalhe do atendimento</h2>
-            <span class="badge orange">Aguardando operador</span>
+            <span class="badge orange" id="detailStatusBadge">Aguardando operador</span>
           </div>
 
-          <div class="detail">
-            <section class="customer-head">
-              <div>
-                <h2>Ronaldo Pereira da Silva</h2>
-                <p>Telefone final ***7937 · Documento final ***9865 · Sarandi/PR</p>
-              </div>
-              <button class="whatsapp">Abrir WhatsApp</button>
-            </section>
-
-            <section class="info-grid">
-              <div class="info"><span>Sistema</span><strong>5,85 kWp · 10 placas</strong></div>
-              <div class="info"><span>Inversor</span><strong>Sofar 5kW monofásico 220V</strong></div>
-              <div class="info"><span>Telhado</span><strong>Fibrocimento</strong></div>
-              <div class="info"><span>Venda</span><strong>09/10/2025</strong></div>
-              <div class="info"><span>Assunto</span><strong>Aplicativo / internet</strong></div>
-              <div class="info"><span>Responsável</span><strong>Não atribuído</strong></div>
-            </section>
-
-            <section class="columns">
-              <div class="field">
-                <label>Status</label>
-                <select>
-                  <option>Novo</option>
-                  <option selected>Em atendimento</option>
-                  <option>Aguardando cliente</option>
-                  <option>Resolvido</option>
-                </select>
-              </div>
-              <div class="field">
-                <label>Prioridade</label>
-                <select>
-                  <option>Normal</option>
-                  <option>Alta</option>
-                  <option selected>Urgente</option>
-                </select>
-              </div>
-            </section>
-
-            <section class="field">
-              <label>Resumo da IA</label>
-              <textarea>Cliente informou que mudou a internet e ficou sem acesso ao aplicativo. Perguntou como alterar a senha/rede no inversor. IA orientou a não abrir equipamento, quadro elétrico ou mexer em disjuntores, solicitou print do app e foto do inversor, e encaminhou para suporte responsável.</textarea>
-            </section>
-
-            <section class="field">
-              <label>Próxima ação do operador</label>
-              <textarea>Entrar no WhatsApp, confirmar modelo/etiqueta do inversor, validar se o cliente tem acesso ao app de monitoramento e orientar reconexão conforme procedimento oficial Sofar/WM.</textarea>
-            </section>
-
-            <section class="panel" style="box-shadow:none;">
-              <div class="panel-head">
-                <h2 class="panel-title">Histórico resumido</h2>
-                <span class="badge">4 eventos</span>
-              </div>
-              <div class="detail">
-                <div class="timeline">
-                  <div class="event"><span>15:37</span><div><strong>IA iniciou atendimento</strong><br>Cliente informou suporte.</div></div>
-                  <div class="event"><span>15:38</span><div><strong>Cadastro localizado</strong><br>Ronaldo Pereira da Silva, Sarandi/PR, 5,85 kWp.</div></div>
-                  <div class="event"><span>15:44</span><div><strong>Problema identificado</strong><br>Troca de internet e sem acesso ao app.</div></div>
-                  <div class="event"><span>16:05</span><div><strong>Transferência sugerida</strong><br>Encaminhar suporte para reconexão segura.</div></div>
-                </div>
-              </div>
-            </section>
-
-            <div class="footer-actions">
-              <button class="btn">Atribuir operador</button>
-              <button class="btn">Aguardar cliente</button>
-              <button class="btn primary">Marcar resolvido</button>
-            </div>
-          </div>
+          <div class="detail" id="ticketDetail"></div>
         </article>
       </section>
     </main>
   </div>
+
+  <div class="modal" id="ticketModal" hidden>
+    <div class="modal-box">
+      <div class="panel-head">
+        <h2 class="panel-title">Novo atendimento</h2>
+        <button class="btn" id="closeModal" type="button">Fechar</button>
+      </div>
+      <form class="modal-form" id="ticketForm">
+        <section class="columns">
+          <div class="field"><label>Cliente</label><input name="customerName" required></div>
+          <div class="field"><label>Telefone</label><input name="phone" placeholder="44999999999"></div>
+        </section>
+        <section class="columns">
+          <div class="field"><label>Cidade</label><input name="city"></div>
+          <div class="field"><label>UF</label><input name="state" maxlength="2"></div>
+        </section>
+        <section class="columns">
+          <div class="field"><label>Assunto</label><input name="subject" required placeholder="Aplicativo / internet"></div>
+          <div class="field">
+            <label>Prioridade</label>
+            <select name="priority">
+              <option>Normal</option>
+              <option>Alta</option>
+              <option>Urgente</option>
+            </select>
+          </div>
+        </section>
+        <section class="columns">
+          <div class="field"><label>Sistema</label><input name="systemPower" placeholder="5,85 kWp"></div>
+          <div class="field"><label>Placas</label><input name="panels" placeholder="10 placas"></div>
+        </section>
+        <section class="columns">
+          <div class="field"><label>Inversor</label><input name="inverter" placeholder="Sofar 5kW"></div>
+          <div class="field"><label>Telhado</label><input name="roofType" placeholder="Fibrocimento"></div>
+        </section>
+        <section class="field"><label>Mensagem do cliente</label><textarea name="customerMessage" required></textarea></section>
+        <section class="field"><label>Resumo da IA</label><textarea name="aiSummary"></textarea></section>
+        <section class="field"><label>Próxima ação</label><textarea name="nextAction"></textarea></section>
+        <div class="footer-actions">
+          <button class="btn" id="resetDemo" type="button">Restaurar demo</button>
+          <button class="btn primary" type="submit">Salvar atendimento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = 'wm-crm-pos-venda-tickets-v2';
+    const statuses = ['Novo', 'Em atendimento', 'Aguardando cliente', 'Resolvido'];
+    const priorities = ['Normal', 'Alta', 'Urgente'];
+
+    const seedTickets = [
+      {
+        id: crypto.randomUUID(),
+        createdAt: '2026-05-21T15:37:00',
+        updatedAt: new Date().toISOString(),
+        status: 'Novo',
+        priority: 'Urgente',
+        customerName: 'Ronaldo Pereira da Silva',
+        phone: '44999187937',
+        documentMasked: '***9865',
+        city: 'Sarandi',
+        state: 'PR',
+        systemPower: '5,85 kWp',
+        panels: '10 placas',
+        inverter: 'Sofar 5kW monofásico 220V',
+        roofType: 'Fibrocimento',
+        saleDate: '09/10/2025',
+        subject: 'Aplicativo / internet',
+        assignedTo: '',
+        customerMessage: 'Troca de internet, sem acesso ao app. Precisa orientação de reconexão do inversor Sofar.',
+        aiSummary: 'Cliente informou que mudou a internet e ficou sem acesso ao aplicativo. Perguntou como alterar a senha/rede no inversor. IA orientou a não abrir equipamento, quadro elétrico ou mexer em disjuntores, solicitou print do app e foto do inversor, e encaminhou para suporte responsável.',
+        nextAction: 'Entrar no WhatsApp, confirmar modelo/etiqueta do inversor, validar se o cliente tem acesso ao app de monitoramento e orientar reconexão conforme procedimento oficial Sofar/WM.',
+        events: [
+          ['15:37', 'IA iniciou atendimento', 'Cliente informou suporte.'],
+          ['15:38', 'Cadastro localizado', 'Ronaldo Pereira da Silva, Sarandi/PR, 5,85 kWp.'],
+          ['15:44', 'Problema identificado', 'Troca de internet e sem acesso ao app.'],
+          ['16:05', 'Transferência sugerida', 'Encaminhar suporte para reconexão segura.']
+        ]
+      },
+      {
+        id: crypto.randomUUID(),
+        createdAt: '2026-05-21T16:10:00',
+        updatedAt: new Date().toISOString(),
+        status: 'Aguardando cliente',
+        priority: 'Alta',
+        customerName: 'Thiago Aparecido Veloso',
+        phone: '',
+        documentMasked: '***',
+        city: 'Sarandi',
+        state: 'PR',
+        systemPower: '4,095 kWp',
+        panels: '7 placas ODEX 585W',
+        inverter: 'Sofar 3.3kW monofásico',
+        roofType: 'Telhado colonial',
+        saleDate: '',
+        subject: 'Aplicativo',
+        assignedTo: '',
+        customerMessage: 'Cliente pediu acesso ao monitoramento.',
+        aiSummary: 'IA localizou cadastro e solicitou validação de CPF/telefone antes de seguir com dados sensíveis.',
+        nextAction: 'Aguardar cliente completar CPF/CNPJ ou telefone cadastrado antes de qualquer orientação sensível.',
+        events: [['16:10', 'Identidade em validação', 'Solicitado dado cadastral parcial.']]
+      },
+      {
+        id: crypto.randomUUID(),
+        createdAt: '2026-05-21T16:26:00',
+        updatedAt: new Date().toISOString(),
+        status: 'Aguardando cliente',
+        priority: 'Normal',
+        customerName: 'Regina Galeriani',
+        phone: '',
+        documentMasked: '***',
+        city: 'Apucarana',
+        state: 'PR',
+        systemPower: '',
+        panels: '',
+        inverter: '',
+        roofType: '',
+        saleDate: '',
+        subject: 'Baixa geração',
+        assignedTo: '',
+        customerMessage: 'Baixa geração informada. Cliente ainda não enviou print do aplicativo.',
+        aiSummary: 'IA pediu print do app e foto do inversor para triagem inicial.',
+        nextAction: 'Cobrar evidências e comparar geração informada com condição climática/local.',
+        events: [['16:26', 'Evidência solicitada', 'Aguardando print do aplicativo.']]
+      }
+    ];
+
+    let tickets = loadTickets();
+    let selectedId = tickets[0]?.id || null;
+
+    const ticketList = document.querySelector('#ticketList');
+    const ticketDetail = document.querySelector('#ticketDetail');
+    const detailStatusBadge = document.querySelector('#detailStatusBadge');
+    const searchInput = document.querySelector('#searchInput');
+    const statusFilter = document.querySelector('#statusFilter');
+    const modal = document.querySelector('#ticketModal');
+    const form = document.querySelector('#ticketForm');
+    const toast = document.querySelector('#toast');
+
+    function loadTickets() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(seedTickets));
+        return seedTickets;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) && parsed.length ? parsed : seedTickets;
+      } catch {
+        return seedTickets;
+      }
+    }
+
+    function saveTickets() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
+    }
+
+    function render() {
+      renderMetrics();
+      renderList();
+      renderDetail();
+    }
+
+    function filteredTickets() {
+      const query = searchInput.value.trim().toLowerCase();
+      const status = statusFilter.value;
+      return tickets.filter((ticket) => {
+        const haystack = [ticket.customerName, ticket.phone, ticket.city, ticket.state, ticket.subject, ticket.customerMessage].join(' ').toLowerCase();
+        const matchesQuery = !query || haystack.includes(query);
+        const matchesStatus = status === 'Todos status' || ticket.status === status;
+        return matchesQuery && matchesStatus;
+      });
+    }
+
+    function renderMetrics() {
+      const counts = {
+        novos: tickets.filter((ticket) => ticket.status === 'Novo').length,
+        atendimento: tickets.filter((ticket) => ticket.status === 'Em atendimento').length,
+        urgentes: tickets.filter((ticket) => ticket.priority === 'Urgente').length,
+        resolvidos: tickets.filter((ticket) => ticket.status === 'Resolvido').length
+      };
+      document.querySelector('#metrics').innerHTML = `
+        <article class="metric"><span>Novos</span><strong>${counts.novos}</strong><small>aguardando operador</small></article>
+        <article class="metric"><span>Em atendimento</span><strong>${counts.atendimento}</strong><small>com responsável definido</small></article>
+        <article class="metric"><span>Urgentes</span><strong>${counts.urgentes}</strong><small>risco elétrico ou cliente crítico</small></article>
+        <article class="metric"><span>Resolvidos</span><strong>${counts.resolvidos}</strong><small>salvos neste navegador</small></article>
+      `;
+    }
+
+    function renderList() {
+      const visible = filteredTickets();
+      if (!visible.some((ticket) => ticket.id === selectedId)) selectedId = visible[0]?.id || tickets[0]?.id || null;
+      if (!visible.length) {
+        ticketList.innerHTML = '<div class="empty-state">Nenhum atendimento encontrado.</div>';
+        return;
+      }
+      ticketList.innerHTML = visible.map((ticket) => `
+        <button class="ticket ${ticket.id === selectedId ? 'active' : ''}" data-id="${ticket.id}" type="button">
+          <div class="ticket-top">
+            <strong>${escapeHtml(ticket.customerName)}</strong>
+            <span class="badge ${priorityClass(ticket.priority)}">${escapeHtml(ticket.priority)}</span>
+          </div>
+          <p>${escapeHtml(ticket.customerMessage || ticket.aiSummary || 'Sem resumo informado.')}</p>
+          <div class="badges">
+            <span class="badge blue">${escapeHtml(ticket.subject || 'Atendimento')}</span>
+            <span class="badge ${statusClass(ticket.status)}">${escapeHtml(ticket.status)}</span>
+            <span class="badge">${escapeHtml([ticket.city, ticket.state].filter(Boolean).join('/') || 'Sem cidade')}</span>
+          </div>
+        </button>
+      `).join('');
+      ticketList.querySelectorAll('.ticket').forEach((button) => {
+        button.addEventListener('click', () => {
+          selectedId = button.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function renderDetail() {
+      const ticket = tickets.find((item) => item.id === selectedId);
+      if (!ticket) {
+        detailStatusBadge.textContent = 'Sem seleção';
+        ticketDetail.innerHTML = '<div class="empty-state">Selecione ou crie um atendimento.</div>';
+        return;
+      }
+      detailStatusBadge.textContent = ticket.status;
+      detailStatusBadge.className = `badge ${statusClass(ticket.status)}`;
+      ticketDetail.innerHTML = `
+        <section class="customer-head">
+          <div>
+            <h2>${escapeHtml(ticket.customerName)}</h2>
+            <p>Telefone final ${escapeHtml(maskPhone(ticket.phone))} · Documento final ${escapeHtml(ticket.documentMasked || '***')} · ${escapeHtml([ticket.city, ticket.state].filter(Boolean).join('/') || 'Sem cidade')}</p>
+          </div>
+          <button class="whatsapp" id="openWhatsApp" type="button">Abrir WhatsApp</button>
+        </section>
+
+        <section class="info-grid">
+          <div class="info"><span>Sistema</span><strong>${escapeHtml([ticket.systemPower, ticket.panels].filter(Boolean).join(' · ') || 'Não informado')}</strong></div>
+          <div class="info"><span>Inversor</span><strong>${escapeHtml(ticket.inverter || 'Não informado')}</strong></div>
+          <div class="info"><span>Telhado</span><strong>${escapeHtml(ticket.roofType || 'Não informado')}</strong></div>
+          <div class="info"><span>Venda</span><strong>${escapeHtml(ticket.saleDate || 'Não informado')}</strong></div>
+          <div class="info"><span>Assunto</span><strong>${escapeHtml(ticket.subject || 'Atendimento')}</strong></div>
+          <div class="info"><span>Responsável</span><strong>${escapeHtml(ticket.assignedTo || 'Não atribuído')}</strong></div>
+        </section>
+
+        <section class="columns">
+          <div class="field">
+            <label>Status</label>
+            <select id="detailStatus">${statuses.map((status) => `<option ${status === ticket.status ? 'selected' : ''}>${status}</option>`).join('')}</select>
+          </div>
+          <div class="field">
+            <label>Prioridade</label>
+            <select id="detailPriority">${priorities.map((priority) => `<option ${priority === ticket.priority ? 'selected' : ''}>${priority}</option>`).join('')}</select>
+          </div>
+        </section>
+
+        <section class="field">
+          <label>Responsável</label>
+          <input id="detailAssigned" value="${escapeAttr(ticket.assignedTo || '')}" placeholder="Nome do operador">
+        </section>
+
+        <section class="field">
+          <label>Resumo da IA</label>
+          <textarea id="detailSummary">${escapeHtml(ticket.aiSummary || '')}</textarea>
+        </section>
+
+        <section class="field">
+          <label>Próxima ação do operador</label>
+          <textarea id="detailNextAction">${escapeHtml(ticket.nextAction || '')}</textarea>
+        </section>
+
+        <section class="panel" style="box-shadow:none;">
+          <div class="panel-head">
+            <h2 class="panel-title">Histórico resumido</h2>
+            <span class="badge">${ticket.events?.length || 0} eventos</span>
+          </div>
+          <div class="detail">
+            <div class="timeline">
+              ${(ticket.events || []).map((event) => `<div class="event"><span>${escapeHtml(event[0])}</span><div><strong>${escapeHtml(event[1])}</strong><br>${escapeHtml(event[2])}</div></div>`).join('')}
+            </div>
+          </div>
+        </section>
+
+        <div class="footer-actions">
+          <button class="btn" id="assignTicket" type="button">Atribuir operador</button>
+          <button class="btn" id="waitCustomer" type="button">Aguardar cliente</button>
+          <button class="btn primary" id="resolveTicket" type="button">Marcar resolvido</button>
+        </div>
+      `;
+      bindDetail(ticket);
+    }
+
+    function bindDetail(ticket) {
+      ticketDetail.querySelector('#detailStatus').addEventListener('change', (event) => updateTicket(ticket.id, { status: event.target.value }, `Status alterado para ${event.target.value}`));
+      ticketDetail.querySelector('#detailPriority').addEventListener('change', (event) => updateTicket(ticket.id, { priority: event.target.value }, `Prioridade alterada para ${event.target.value}`));
+      ticketDetail.querySelector('#detailAssigned').addEventListener('change', (event) => updateTicket(ticket.id, { assignedTo: event.target.value }, 'Responsável atualizado'));
+      ticketDetail.querySelector('#detailSummary').addEventListener('change', (event) => updateTicket(ticket.id, { aiSummary: event.target.value }, 'Resumo salvo'));
+      ticketDetail.querySelector('#detailNextAction').addEventListener('change', (event) => updateTicket(ticket.id, { nextAction: event.target.value }, 'Próxima ação salva'));
+      ticketDetail.querySelector('#assignTicket').addEventListener('click', () => {
+        const name = prompt('Nome do operador responsável:', ticket.assignedTo || '');
+        if (name !== null) updateTicket(ticket.id, { assignedTo: name.trim(), status: 'Em atendimento' }, 'Atendimento atribuído');
+      });
+      ticketDetail.querySelector('#waitCustomer').addEventListener('click', () => updateTicket(ticket.id, { status: 'Aguardando cliente' }, 'Atendimento aguardando cliente'));
+      ticketDetail.querySelector('#resolveTicket').addEventListener('click', () => updateTicket(ticket.id, { status: 'Resolvido' }, 'Atendimento marcado como resolvido'));
+      ticketDetail.querySelector('#openWhatsApp').addEventListener('click', () => {
+        if (!ticket.phone) {
+          showToast('Telefone não informado neste ticket.');
+          return;
+        }
+        window.open(`https://wa.me/55${onlyDigits(ticket.phone)}`, '_blank', 'noopener');
+      });
+    }
+
+    function updateTicket(id, changes, message) {
+      tickets = tickets.map((ticket) => {
+        if (ticket.id !== id) return ticket;
+        const event = [new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), message, 'Atualizado pelo operador no CRM.'];
+        return { ...ticket, ...changes, updatedAt: new Date().toISOString(), events: [...(ticket.events || []), event] };
+      });
+      saveTickets();
+      render();
+      showToast(message);
+    }
+
+    function createTicket(data) {
+      const now = new Date();
+      const ticket = {
+        id: crypto.randomUUID(),
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+        status: 'Novo',
+        priority: data.priority || 'Normal',
+        customerName: data.customerName,
+        phone: data.phone,
+        documentMasked: '***',
+        city: data.city,
+        state: data.state.toUpperCase(),
+        systemPower: data.systemPower,
+        panels: data.panels,
+        inverter: data.inverter,
+        roofType: data.roofType,
+        saleDate: '',
+        subject: data.subject,
+        assignedTo: '',
+        customerMessage: data.customerMessage,
+        aiSummary: data.aiSummary || data.customerMessage,
+        nextAction: data.nextAction || 'Operador deve assumir no WhatsApp e continuar de onde a IA parou.',
+        events: [[now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), 'Ticket criado', 'Atendimento criado manualmente no CRM.']]
+      };
+      tickets = [ticket, ...tickets];
+      selectedId = ticket.id;
+      saveTickets();
+      render();
+      showToast('Atendimento criado');
+    }
+
+    function exportCsv() {
+      const headers = ['cliente', 'telefone', 'cidade', 'uf', 'status', 'prioridade', 'assunto', 'responsavel', 'resumo_ia', 'proxima_acao'];
+      const rows = tickets.map((ticket) => [ticket.customerName, ticket.phone, ticket.city, ticket.state, ticket.status, ticket.priority, ticket.subject, ticket.assignedTo, ticket.aiSummary, ticket.nextAction]);
+      const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value || '').replaceAll('"', '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `crm-pos-venda-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(showToast.timeout);
+      showToast.timeout = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, '&#096;');
+    }
+
+    function onlyDigits(value) {
+      return String(value || '').replace(/\D/g, '');
+    }
+
+    function maskPhone(value) {
+      const digits = onlyDigits(value);
+      return digits ? `***${digits.slice(-4)}` : '***';
+    }
+
+    function priorityClass(priority) {
+      if (priority === 'Urgente') return 'red';
+      if (priority === 'Alta') return 'orange';
+      return '';
+    }
+
+    function statusClass(status) {
+      if (status === 'Novo') return 'orange';
+      if (status === 'Em atendimento') return 'blue';
+      if (status === 'Aguardando cliente') return 'green';
+      return '';
+    }
+
+    searchInput.addEventListener('input', render);
+    statusFilter.addEventListener('change', render);
+    document.querySelector('#openNewTicket').addEventListener('click', () => modal.hidden = false);
+    document.querySelector('#closeModal').addEventListener('click', () => modal.hidden = true);
+    document.querySelector('#exportCsv').addEventListener('click', exportCsv);
+    document.querySelector('#resetDemo').addEventListener('click', () => {
+      if (!confirm('Restaurar tickets de demonstração? Isso apaga alterações locais deste navegador.')) return;
+      tickets = seedTickets;
+      selectedId = tickets[0].id;
+      saveTickets();
+      render();
+      showToast('Demo restaurada');
+    });
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+      createTicket(data);
+      form.reset();
+      modal.hidden = true;
+    });
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) modal.hidden = true;
+    });
+
+    render();
+  </script>
 </body>
 </html>
