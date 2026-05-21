@@ -14,6 +14,8 @@ Versao funcional inicial do CRM de pos-venda da WM Energia Solar.
 - Botao para abrir WhatsApp quando o telefone esta cadastrado
 - Exportacao CSV
 - Persistencia local via `localStorage` do navegador
+- Tela de login para operador
+- Integracao preparada para Supabase Auth + tabela `tickets`
 
 ## Como publicar no Vercel
 
@@ -27,14 +29,35 @@ Versao funcional inicial do CRM de pos-venda da WM Energia Solar.
 
 ## Observacao importante
 
-Nesta fase, os dados ficam salvos no navegador de quem usa o CRM. Isso ja permite operar e testar o fluxo, mas ainda nao e banco compartilhado entre operadores.
+Sem configurar Supabase, os dados ficam salvos no navegador de quem usa o CRM. Isso permite operar e testar o fluxo, mas ainda nao e banco compartilhado entre operadores.
+
+Logins locais provisórios para teste:
+
+- `admin` / `wm2026`
+- `suporte` / `suporte2026`
+- `financeiro` / `financeiro2026`
+
+Esses logins locais nao sao seguranca real, porque o app ainda e HTML estatico. Para operacao com dados reais, use Supabase Auth.
+
+## Como conectar Supabase
+
+1. Crie um projeto no Supabase.
+2. Rode o SQL de `supabase_schema.sql` no SQL Editor.
+3. Em Authentication, crie os usuarios dos operadores com email e senha.
+4. No `index.html`, preencha:
+
+```js
+const SUPABASE_URL = 'https://SEU-PROJETO.supabase.co';
+const SUPABASE_ANON_KEY = 'SUA_ANON_KEY';
+```
+
+Depois disso, o login passa a usar Supabase Auth e os tickets passam a sincronizar na tabela `tickets`.
 
 ## Proxima fase
 
 Transformar em app multiusuario com:
 
 - Next.js
-- Supabase/Postgres
-- Login de operadores
+- API de backend para o agente criar tickets sem expor chave sensivel
 - API para o agente de WhatsApp criar tickets
 - Historico de atendimento

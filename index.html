@@ -36,6 +36,67 @@
       font: inherit;
     }
 
+    .login-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background:
+        linear-gradient(135deg, rgba(15, 111, 168, .92), rgba(12, 23, 38, .96)),
+        #0c1726;
+    }
+
+    .login-screen[hidden],
+    .app[hidden] {
+      display: none;
+    }
+
+    .login-box {
+      width: min(420px, 100%);
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, .28);
+      overflow: hidden;
+    }
+
+    .login-head {
+      padding: 22px;
+      background: #0c1726;
+      color: #fff;
+    }
+
+    .login-head h1 {
+      margin-top: 14px;
+      font-size: 24px;
+    }
+
+    .login-head p {
+      margin: 6px 0 0;
+      color: #b8c3d2;
+      font-size: 13px;
+    }
+
+    .login-form {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+    }
+
+    .login-error {
+      display: none;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: #ffecec;
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .login-error.show {
+      display: block;
+    }
+
     .app {
       min-height: 100vh;
       display: grid;
@@ -135,6 +196,36 @@
       color: #c3ccda;
       font-size: 12px;
       line-height: 1.45;
+    }
+
+    .operator-card {
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .06);
+      color: #c3ccda;
+      font-size: 12px;
+    }
+
+    .operator-card strong,
+    .operator-card span {
+      display: block;
+    }
+
+    .operator-card strong {
+      color: #fff;
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .operator-card .btn {
+      width: 100%;
+      height: 32px;
+      margin-top: 10px;
+      background: rgba(255, 255, 255, .08);
+      border-color: rgba(255, 255, 255, .18);
+      color: #fff;
     }
 
     main {
@@ -338,6 +429,7 @@
     .badge.orange { background: #fff5e8; color: var(--orange); }
     .badge.green { background: #e9f8f1; color: var(--green); }
     .badge.blue { background: #eaf1ff; color: var(--blue); }
+    .badge.dark { background: #e8edf5; color: #142033; }
 
     .detail {
       display: grid;
@@ -538,7 +630,29 @@
   </style>
 </head>
 <body>
-  <div class="app">
+  <section class="login-screen" id="loginScreen">
+    <div class="login-box">
+      <div class="login-head">
+        <div class="brand-mark">WM</div>
+        <h1>CRM Pós-Venda</h1>
+        <p>Entre com o operador para acessar a fila de atendimentos.</p>
+      </div>
+      <form class="login-form" id="loginForm">
+        <div class="field">
+          <label>Login ou email</label>
+          <input id="loginUser" name="login" autocomplete="username" required placeholder="admin ou operador@wmenergia.com">
+        </div>
+        <div class="field">
+          <label>Senha</label>
+          <input id="loginPassword" name="password" type="password" autocomplete="current-password" required placeholder="Senha do operador">
+        </div>
+        <div class="login-error" id="loginError">Login ou senha inválidos.</div>
+        <button class="btn primary" type="submit">Entrar</button>
+      </form>
+    </div>
+  </section>
+
+  <div class="app" id="app" hidden>
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">WM</div>
@@ -561,6 +675,13 @@
 
       <div class="sidebar-note">
         Atendimento humano continua pelo WhatsApp. O CRM guarda fila, status, resumo da IA e dados seguros do cliente.
+      </div>
+
+      <div class="operator-card">
+        <span>Operador logado</span>
+        <strong id="operatorName">-</strong>
+        <span id="databaseStatus">Banco local</span>
+        <button class="btn" id="logoutButton" type="button">Sair</button>
       </div>
     </aside>
 
@@ -587,7 +708,7 @@
         <article class="panel">
           <div class="panel-head">
             <h2 class="panel-title" id="listTitle">Atendimentos</h2>
-            <span class="badge blue">Tempo real</span>
+            <span class="badge blue" id="syncBadge">Local</span>
           </div>
           <div class="search">
             <input id="searchInput" type="search" value="" placeholder="Buscar cliente, telefone ou cidade">
@@ -662,8 +783,18 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const STORAGE_KEY = 'wm-crm-pos-venda-tickets-v2';
+    const SESSION_KEY = 'wm-crm-pos-venda-session-v1';
+    const SUPABASE_URL = '';
+    const SUPABASE_ANON_KEY = '';
+    const SUPABASE_TABLE = 'tickets';
+    const operators = [
+      { login: 'admin', password: 'wm2026', name: 'Admin WM' },
+      { login: 'suporte', password: 'suporte2026', name: 'Suporte WM' },
+      { login: 'financeiro', password: 'financeiro2026', name: 'Financeiro WM' }
+    ];
     const statuses = ['Novo', 'Em atendimento', 'Aguardando cliente', 'Resolvido'];
     const priorities = ['Normal', 'Alta', 'Urgente'];
     const viewConfig = {
@@ -788,10 +919,20 @@
       }
     ];
 
+    let currentOperator = loadSession();
+    let supabaseClient = null;
+    let remoteReady = false;
     let tickets = loadTickets();
     let selectedId = tickets[0]?.id || null;
     let activeView = 'fila';
 
+    const loginScreen = document.querySelector('#loginScreen');
+    const app = document.querySelector('#app');
+    const loginForm = document.querySelector('#loginForm');
+    const loginError = document.querySelector('#loginError');
+    const operatorName = document.querySelector('#operatorName');
+    const databaseStatus = document.querySelector('#databaseStatus');
+    const syncBadge = document.querySelector('#syncBadge');
     const navItems = document.querySelectorAll('.nav-item[data-view]');
     const pageTitle = document.querySelector('#pageTitle');
     const pageSubtitle = document.querySelector('#pageSubtitle');
@@ -819,8 +960,150 @@
       }
     }
 
-    function saveTickets() {
+    async function saveTickets() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
+      if (remoteReady) await syncTicketsToDatabase();
+    }
+
+    function loadSession() {
+      try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveSession(operator) {
+      currentOperator = { login: operator.login, name: operator.name };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(currentOperator));
+    }
+
+    function clearSession() {
+      currentOperator = null;
+      localStorage.removeItem(SESSION_KEY);
+    }
+
+    function renderAuth() {
+      const isLoggedIn = Boolean(currentOperator);
+      loginScreen.hidden = isLoggedIn;
+      app.hidden = !isLoggedIn;
+      operatorName.textContent = currentOperator?.name || '-';
+      updateDatabaseStatus();
+      if (isLoggedIn) render();
+    }
+
+    function updateDatabaseStatus() {
+      const connected = Boolean(remoteReady);
+      databaseStatus.textContent = connected ? 'Banco online conectado' : 'Banco local neste navegador';
+      syncBadge.textContent = connected ? 'Banco online' : 'Local';
+      syncBadge.className = `badge ${connected ? 'green' : 'dark'}`;
+    }
+
+    function isSupabaseConfigured() {
+      return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase);
+    }
+
+    function ensureSupabaseClient() {
+      if (!isSupabaseConfigured()) return null;
+      if (!supabaseClient) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+      return supabaseClient;
+    }
+
+    async function initDatabase() {
+      const client = ensureSupabaseClient();
+      if (!client) {
+        updateDatabaseStatus();
+        return;
+      }
+      try {
+        const { data, error } = await client
+          .from(SUPABASE_TABLE)
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        remoteReady = true;
+        const remoteTickets = (data || []).map(fromDatabaseTicket);
+        if (remoteTickets.length) {
+          tickets = remoteTickets;
+          selectedId = tickets[0]?.id || null;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
+        } else {
+          await syncTicketsToDatabase();
+        }
+        updateDatabaseStatus();
+        render();
+        showToast('Banco online conectado');
+      } catch (error) {
+        remoteReady = false;
+        updateDatabaseStatus();
+        console.error(error);
+        showToast('Banco online indisponível. Usando dados locais.');
+      }
+    }
+
+    async function syncTicketsToDatabase() {
+      if (!supabaseClient) return;
+      const payload = tickets.map(toDatabaseTicket);
+      const { error } = await supabaseClient.from(SUPABASE_TABLE).upsert(payload, { onConflict: 'id' });
+      if (error) {
+        console.error(error);
+        showToast('Não foi possível sincronizar com o banco.');
+      }
+    }
+
+    function toDatabaseTicket(ticket) {
+      return {
+        id: ticket.id,
+        created_at: ticket.createdAt,
+        updated_at: ticket.updatedAt,
+        status: ticket.status,
+        priority: ticket.priority,
+        customer_name: ticket.customerName,
+        phone: ticket.phone,
+        document_masked: ticket.documentMasked,
+        city: ticket.city,
+        state: ticket.state,
+        system_power: ticket.systemPower,
+        panels: ticket.panels,
+        inverter: ticket.inverter,
+        roof_type: ticket.roofType,
+        sale_date: ticket.saleDate,
+        subject: ticket.subject,
+        assigned_to: ticket.assignedTo,
+        customer_message: ticket.customerMessage,
+        ai_summary: ticket.aiSummary,
+        next_action: ticket.nextAction,
+        events: ticket.events || []
+      };
+    }
+
+    function fromDatabaseTicket(row) {
+      return {
+        id: row.id,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        status: row.status,
+        priority: row.priority,
+        customerName: row.customer_name,
+        phone: row.phone,
+        documentMasked: row.document_masked,
+        city: row.city,
+        state: row.state,
+        systemPower: row.system_power,
+        panels: row.panels,
+        inverter: row.inverter,
+        roofType: row.roof_type,
+        saleDate: row.sale_date,
+        subject: row.subject,
+        assignedTo: row.assigned_to,
+        customerMessage: row.customer_message,
+        aiSummary: row.ai_summary,
+        nextAction: row.next_action,
+        events: row.events || []
+      };
     }
 
     function render() {
@@ -990,7 +1273,7 @@
       ticketDetail.querySelector('#detailSummary').addEventListener('change', (event) => updateTicket(ticket.id, { aiSummary: event.target.value }, 'Resumo salvo'));
       ticketDetail.querySelector('#detailNextAction').addEventListener('change', (event) => updateTicket(ticket.id, { nextAction: event.target.value }, 'Próxima ação salva'));
       ticketDetail.querySelector('#assignTicket').addEventListener('click', () => {
-        const name = prompt('Nome do operador responsável:', ticket.assignedTo || '');
+        const name = prompt('Nome do operador responsável:', ticket.assignedTo || currentOperator?.name || '');
         if (name !== null) updateTicket(ticket.id, { assignedTo: name.trim(), status: 'Em atendimento' }, 'Atendimento atribuído');
       });
       ticketDetail.querySelector('#waitCustomer').addEventListener('click', () => updateTicket(ticket.id, { status: 'Aguardando cliente' }, 'Atendimento aguardando cliente'));
@@ -1004,18 +1287,18 @@
       });
     }
 
-    function updateTicket(id, changes, message) {
+    async function updateTicket(id, changes, message) {
       tickets = tickets.map((ticket) => {
         if (ticket.id !== id) return ticket;
-        const event = [new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), message, 'Atualizado pelo operador no CRM.'];
+        const event = [new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), message, `Atualizado por ${currentOperator?.name || 'operador'} no CRM.`];
         return { ...ticket, ...changes, updatedAt: new Date().toISOString(), events: [...(ticket.events || []), event] };
       });
-      saveTickets();
+      await saveTickets();
       render();
       showToast(message);
     }
 
-    function createTicket(data) {
+    async function createTicket(data) {
       const now = new Date();
       const ticket = {
         id: crypto.randomUUID(),
@@ -1034,15 +1317,15 @@
         roofType: data.roofType,
         saleDate: '',
         subject: data.subject,
-        assignedTo: '',
+        assignedTo: currentOperator?.name || '',
         customerMessage: data.customerMessage,
         aiSummary: data.aiSummary || data.customerMessage,
         nextAction: data.nextAction || 'Operador deve assumir no WhatsApp e continuar de onde a IA parou.',
-        events: [[now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), 'Ticket criado', 'Atendimento criado manualmente no CRM.']]
+        events: [[now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), 'Ticket criado', `Atendimento criado por ${currentOperator?.name || 'operador'} no CRM.`]]
       };
       tickets = [ticket, ...tickets];
       selectedId = ticket.id;
-      saveTickets();
+      await saveTickets();
       render();
       showToast('Atendimento criado');
     }
@@ -1097,6 +1380,50 @@
       return '';
     }
 
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(loginForm).entries());
+      const client = ensureSupabaseClient();
+      if (client) {
+        const { data: authData, error } = await client.auth.signInWithPassword({
+          email: data.login.trim(),
+          password: data.password
+        });
+        if (error) {
+          loginError.textContent = 'Login ou senha inválidos no Supabase.';
+          loginError.classList.add('show');
+          return;
+        }
+        saveSession({
+          login: authData.user.email,
+          name: authData.user.user_metadata?.name || authData.user.email
+        });
+        loginError.classList.remove('show');
+        loginForm.reset();
+        renderAuth();
+        initDatabase();
+        return;
+      }
+
+      const operator = operators.find((item) => item.login === data.login.trim().toLowerCase() && item.password === data.password);
+      if (!operator) {
+        loginError.textContent = 'Login ou senha inválidos.';
+        loginError.classList.add('show');
+        return;
+      }
+      loginError.classList.remove('show');
+      saveSession(operator);
+      loginForm.reset();
+      renderAuth();
+      initDatabase();
+    });
+
+    document.querySelector('#logoutButton').addEventListener('click', async () => {
+      if (supabaseClient) await supabaseClient.auth.signOut();
+      clearSession();
+      renderAuth();
+    });
+
     searchInput.addEventListener('input', render);
     statusFilter.addEventListener('change', render);
     navItems.forEach((item) => {
@@ -1114,18 +1441,18 @@
     document.querySelector('#openNewTicket').addEventListener('click', () => modal.hidden = false);
     document.querySelector('#closeModal').addEventListener('click', () => modal.hidden = true);
     document.querySelector('#exportCsv').addEventListener('click', exportCsv);
-    document.querySelector('#resetDemo').addEventListener('click', () => {
+    document.querySelector('#resetDemo').addEventListener('click', async () => {
       if (!confirm('Restaurar tickets de demonstração? Isso apaga alterações locais deste navegador.')) return;
       tickets = seedTickets;
       selectedId = tickets[0].id;
-      saveTickets();
+      await saveTickets();
       render();
       showToast('Demo restaurada');
     });
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(form).entries());
-      createTicket(data);
+      await createTicket(data);
       form.reset();
       modal.hidden = true;
     });
@@ -1133,7 +1460,8 @@
       if (event.target === modal) modal.hidden = true;
     });
 
-    render();
+    renderAuth();
+    if (currentOperator) initDatabase();
   </script>
 </body>
 </html>
