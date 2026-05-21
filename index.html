@@ -114,6 +114,11 @@
       border-color: rgba(255, 255, 255, .08);
     }
 
+    .nav-item.active {
+      color: #fff;
+      font-weight: 800;
+    }
+
     .nav-dot {
       width: 9px;
       height: 9px;
@@ -544,15 +549,15 @@
       </div>
 
       <div class="nav-title">Operação</div>
-      <button class="nav-item active"><span class="nav-dot"></span>Fila de atendimento</button>
-      <button class="nav-item"><span class="nav-dot"></span>Clientes</button>
-      <button class="nav-item"><span class="nav-dot"></span>Suporte técnico</button>
-      <button class="nav-item"><span class="nav-dot"></span>Homologação</button>
-      <button class="nav-item"><span class="nav-dot"></span>Financeiro</button>
+      <button class="nav-item active" data-view="fila" type="button"><span class="nav-dot"></span>Fila de atendimento</button>
+      <button class="nav-item" data-view="clientes" type="button"><span class="nav-dot"></span>Clientes</button>
+      <button class="nav-item" data-view="suporte" type="button"><span class="nav-dot"></span>Suporte técnico</button>
+      <button class="nav-item" data-view="homologacao" type="button"><span class="nav-dot"></span>Homologação</button>
+      <button class="nav-item" data-view="financeiro" type="button"><span class="nav-dot"></span>Financeiro</button>
 
       <div class="nav-title">Relatórios</div>
-      <button class="nav-item"><span class="nav-dot"></span>Resolvidos</button>
-      <button class="nav-item"><span class="nav-dot"></span>Tempo de resposta</button>
+      <button class="nav-item" data-view="resolvidos" type="button"><span class="nav-dot"></span>Resolvidos</button>
+      <button class="nav-item" data-view="tempo" type="button"><span class="nav-dot"></span>Tempo de resposta</button>
 
       <div class="sidebar-note">
         Atendimento humano continua pelo WhatsApp. O CRM guarda fila, status, resumo da IA e dados seguros do cliente.
@@ -562,8 +567,8 @@
     <main>
       <header class="topbar">
         <div>
-          <h1>Fila de Pós-Venda</h1>
-          <p class="subtitle">Tickets criados pelo agente IA quando precisa de suporte humano.</p>
+          <h1 id="pageTitle">Fila de Pós-Venda</h1>
+          <p class="subtitle" id="pageSubtitle">Tickets criados pelo agente IA quando precisa de suporte humano.</p>
         </div>
         <div class="actions">
           <button class="btn" id="exportCsv">Exportar</button>
@@ -581,7 +586,7 @@
       <section class="workspace">
         <article class="panel">
           <div class="panel-head">
-            <h2 class="panel-title">Atendimentos</h2>
+            <h2 class="panel-title" id="listTitle">Atendimentos</h2>
             <span class="badge blue">Tempo real</span>
           </div>
           <div class="search">
@@ -661,6 +666,50 @@
     const STORAGE_KEY = 'wm-crm-pos-venda-tickets-v2';
     const statuses = ['Novo', 'Em atendimento', 'Aguardando cliente', 'Resolvido'];
     const priorities = ['Normal', 'Alta', 'Urgente'];
+    const viewConfig = {
+      fila: {
+        title: 'Fila de Pós-Venda',
+        subtitle: 'Tickets criados pelo agente IA quando precisa de suporte humano.',
+        listTitle: 'Atendimentos',
+        empty: 'Nenhum atendimento encontrado.'
+      },
+      clientes: {
+        title: 'Clientes',
+        subtitle: 'Base de clientes atendidos e tickets vinculados ao pós-venda.',
+        listTitle: 'Clientes com atendimento',
+        empty: 'Nenhum cliente encontrado.'
+      },
+      suporte: {
+        title: 'Suporte técnico',
+        subtitle: 'Chamados técnicos de aplicativo, internet, inversor, geração e monitoramento.',
+        listTitle: 'Chamados técnicos',
+        empty: 'Nenhum chamado técnico encontrado.'
+      },
+      homologacao: {
+        title: 'Homologação',
+        subtitle: 'Pendências de ligação, vistoria, concessionária e liberação do sistema.',
+        listTitle: 'Pendências de homologação',
+        empty: 'Nenhum atendimento de homologação encontrado.'
+      },
+      financeiro: {
+        title: 'Financeiro',
+        subtitle: 'Pendências de pagamento, boleto, nota fiscal, contrato e cobrança.',
+        listTitle: 'Pendências financeiras',
+        empty: 'Nenhuma pendência financeira encontrada.'
+      },
+      resolvidos: {
+        title: 'Resolvidos',
+        subtitle: 'Histórico de tickets finalizados pela operação.',
+        listTitle: 'Atendimentos resolvidos',
+        empty: 'Nenhum atendimento resolvido ainda.'
+      },
+      tempo: {
+        title: 'Tempo de resposta',
+        subtitle: 'Acompanhamento operacional por prioridade e data de criação.',
+        listTitle: 'Fila por tempo de espera',
+        empty: 'Nenhum atendimento para medir tempo.'
+      }
+    };
 
     const seedTickets = [
       {
@@ -741,7 +790,12 @@
 
     let tickets = loadTickets();
     let selectedId = tickets[0]?.id || null;
+    let activeView = 'fila';
 
+    const navItems = document.querySelectorAll('.nav-item[data-view]');
+    const pageTitle = document.querySelector('#pageTitle');
+    const pageSubtitle = document.querySelector('#pageSubtitle');
+    const listTitle = document.querySelector('#listTitle');
     const ticketList = document.querySelector('#ticketList');
     const ticketDetail = document.querySelector('#ticketDetail');
     const detailStatusBadge = document.querySelector('#detailStatusBadge');
@@ -770,9 +824,18 @@
     }
 
     function render() {
+      renderChrome();
       renderMetrics();
       renderList();
       renderDetail();
+    }
+
+    function renderChrome() {
+      const config = viewConfig[activeView] || viewConfig.fila;
+      pageTitle.textContent = config.title;
+      pageSubtitle.textContent = config.subtitle;
+      listTitle.textContent = config.listTitle;
+      navItems.forEach((item) => item.classList.toggle('active', item.dataset.view === activeView));
     }
 
     function filteredTickets() {
@@ -782,8 +845,21 @@
         const haystack = [ticket.customerName, ticket.phone, ticket.city, ticket.state, ticket.subject, ticket.customerMessage].join(' ').toLowerCase();
         const matchesQuery = !query || haystack.includes(query);
         const matchesStatus = status === 'Todos status' || ticket.status === status;
-        return matchesQuery && matchesStatus;
+        return matchesQuery && matchesStatus && matchesView(ticket);
       });
+    }
+
+    function matchesView(ticket) {
+      const haystack = [ticket.subject, ticket.customerMessage, ticket.aiSummary, ticket.nextAction].join(' ').toLowerCase();
+      if (activeView === 'resolvidos') return ticket.status === 'Resolvido';
+      if (activeView === 'suporte') return includesAny(haystack, ['aplicativo', 'internet', 'inversor', 'geração', 'geracao', 'monitoramento', 'suporte']);
+      if (activeView === 'homologacao') return includesAny(haystack, ['homologação', 'homologacao', 'vistoria', 'concessionária', 'concessionaria', 'ligação', 'ligacao']);
+      if (activeView === 'financeiro') return includesAny(haystack, ['financeiro', 'boleto', 'pagamento', 'cobrança', 'cobranca', 'nota fiscal', 'contrato']);
+      return true;
+    }
+
+    function includesAny(value, terms) {
+      return terms.some((term) => value.includes(term));
     }
 
     function renderMetrics() {
@@ -803,9 +879,12 @@
 
     function renderList() {
       const visible = filteredTickets();
-      if (!visible.some((ticket) => ticket.id === selectedId)) selectedId = visible[0]?.id || tickets[0]?.id || null;
+      if (activeView === 'tempo') {
+        visible.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      }
+      if (!visible.some((ticket) => ticket.id === selectedId)) selectedId = visible[0]?.id || null;
       if (!visible.length) {
-        ticketList.innerHTML = '<div class="empty-state">Nenhum atendimento encontrado.</div>';
+        ticketList.innerHTML = `<div class="empty-state">${escapeHtml((viewConfig[activeView] || viewConfig.fila).empty)}</div>`;
         return;
       }
       ticketList.innerHTML = visible.map((ticket) => `
@@ -1020,6 +1099,18 @@
 
     searchInput.addEventListener('input', render);
     statusFilter.addEventListener('change', render);
+    navItems.forEach((item) => {
+      item.addEventListener('click', () => {
+        activeView = item.dataset.view;
+        if (activeView === 'resolvidos') {
+          statusFilter.value = 'Resolvido';
+        } else if (statusFilter.value === 'Resolvido') {
+          statusFilter.value = 'Todos status';
+        }
+        selectedId = filteredTickets()[0]?.id || tickets[0]?.id || null;
+        render();
+      });
+    });
     document.querySelector('#openNewTicket').addEventListener('click', () => modal.hidden = false);
     document.querySelector('#closeModal').addEventListener('click', () => modal.hidden = true);
     document.querySelector('#exportCsv').addEventListener('click', exportCsv);
