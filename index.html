@@ -354,6 +354,11 @@
       align-items: start;
     }
 
+    .workspace[hidden],
+    .admin-workspace[hidden] {
+      display: none;
+    }
+
     .panel {
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -549,6 +554,65 @@
       line-height: 1.45;
     }
 
+    .checks {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(160px, 1fr));
+      gap: 8px;
+    }
+
+    .check {
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .check input {
+      width: auto;
+      min-height: auto;
+    }
+
+    .user-card {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .user-card.active {
+      border-color: rgba(15, 111, 168, .42);
+      box-shadow: inset 3px 0 0 var(--brand);
+      background: #f7fbff;
+    }
+
+    .user-card button {
+      text-align: left;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .user-card strong,
+    .user-card span {
+      display: block;
+    }
+
+    .user-card span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
     .timeline {
       display: grid;
       gap: 10px;
@@ -660,7 +724,8 @@
         width: 100%;
       }
       .metrics,
-      .info-grid {
+      .info-grid,
+      .checks {
         grid-template-columns: 1fr;
       }
     }
@@ -714,6 +779,9 @@
       <button class="nav-item" data-view="resolvidos" type="button"><span class="nav-dot"></span>Resolvidos</button>
       <button class="nav-item" data-view="tempo" type="button"><span class="nav-dot"></span>Tempo de resposta</button>
 
+      <div class="nav-title">Admin</div>
+      <button class="nav-item" data-view="admin" type="button"><span class="nav-dot"></span>Usuários e permissões</button>
+
       <div class="sidebar-note">
         Atendimento humano continua pelo WhatsApp. O CRM guarda fila, status, resumo da IA e dados seguros do cliente.
       </div>
@@ -745,7 +813,7 @@
         <article class="metric"><span>Resolvidos hoje</span><strong>0</strong><small>atualizados no navegador</small></article>
       </section>
 
-      <section class="workspace">
+      <section class="workspace" id="ticketWorkspace">
         <article class="panel">
           <div class="panel-head">
             <h2 class="panel-title" id="listTitle">Atendimentos</h2>
@@ -774,6 +842,8 @@
           <div class="detail" id="ticketDetail"></div>
         </article>
       </section>
+
+      <section class="admin-workspace" id="adminWorkspace" hidden></section>
     </main>
   </div>
 
@@ -828,13 +898,25 @@
   <script>
     const STORAGE_KEY = 'wm-crm-pos-venda-tickets-v2';
     const SESSION_KEY = 'wm-crm-pos-venda-session-v1';
+    const USERS_STORAGE_KEY = 'wm-crm-pos-venda-users-v1';
     const SUPABASE_URL = '';
     const SUPABASE_ANON_KEY = '';
     const SUPABASE_TABLE = 'tickets';
-    const operators = [
-      { login: 'admin', password: 'wm2026', name: 'Admin WM' },
-      { login: 'suporte', password: 'suporte2026', name: 'Suporte WM' },
-      { login: 'financeiro', password: 'financeiro2026', name: 'Financeiro WM' }
+    const permissionOptions = [
+      ['fila', 'Fila'],
+      ['clientes', 'Clientes'],
+      ['suporte', 'Suporte técnico'],
+      ['homologacao', 'Homologação'],
+      ['financeiro', 'Financeiro'],
+      ['resolvidos', 'Relatórios'],
+      ['tempo', 'Tempo de resposta'],
+      ['admin', 'Admin']
+    ];
+    const allPermissions = permissionOptions.map(([value]) => value);
+    const defaultUsers = [
+      { login: 'admin', password: 'wm2026', name: 'Admin WM', role: 'admin', permissions: allPermissions },
+      { login: 'suporte', password: 'suporte2026', name: 'Suporte WM', role: 'operador', permissions: ['fila', 'clientes', 'suporte', 'resolvidos', 'tempo'] },
+      { login: 'financeiro', password: 'financeiro2026', name: 'Financeiro WM', role: 'financeiro', permissions: ['fila', 'clientes', 'financeiro', 'resolvidos', 'tempo'] }
     ];
     const statuses = ['Novo', 'Em atendimento', 'Aguardando cliente', 'Resolvido'];
     const priorities = ['Normal', 'Alta', 'Urgente'];
@@ -880,6 +962,12 @@
         subtitle: 'Acompanhamento operacional por prioridade e data de criação.',
         listTitle: 'Fila por tempo de espera',
         empty: 'Nenhum atendimento para medir tempo.'
+      },
+      admin: {
+        title: 'Admin',
+        subtitle: 'Cadastro de usuários, senhas e permissões de acesso por área.',
+        listTitle: 'Usuários',
+        empty: 'Nenhum usuário cadastrado.'
       }
     };
 
@@ -960,12 +1048,14 @@
       }
     ];
 
-    let currentOperator = loadSession();
     let supabaseClient = null;
     let remoteReady = false;
+    let users = loadUsers();
+    let currentOperator = loadSession();
     let tickets = loadTickets();
     let selectedId = tickets[0]?.id || null;
     let activeView = 'fila';
+    let selectedUserLogin = users[0]?.login || '';
 
     const loginScreen = document.querySelector('#loginScreen');
     const app = document.querySelector('#app');
@@ -978,6 +1068,9 @@
     const pageTitle = document.querySelector('#pageTitle');
     const pageSubtitle = document.querySelector('#pageSubtitle');
     const listTitle = document.querySelector('#listTitle');
+    const metricsSection = document.querySelector('#metrics');
+    const ticketWorkspace = document.querySelector('#ticketWorkspace');
+    const adminWorkspace = document.querySelector('#adminWorkspace');
     const ticketList = document.querySelector('#ticketList');
     const ticketDetail = document.querySelector('#ticketDetail');
     const detailStatusBadge = document.querySelector('#detailStatusBadge');
@@ -1001,6 +1094,36 @@
       }
     }
 
+    function loadUsers() {
+      const raw = localStorage.getItem(USERS_STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(defaultUsers));
+        return defaultUsers;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) && parsed.length ? parsed.map(normalizeUser) : defaultUsers;
+      } catch {
+        return defaultUsers;
+      }
+    }
+
+    function normalizeUser(user) {
+      const role = user.role || 'operador';
+      return {
+        login: String(user.login || '').trim().toLowerCase(),
+        password: String(user.password || ''),
+        name: String(user.name || user.login || '').trim(),
+        role,
+        permissions: role === 'admin' ? allPermissions : (Array.isArray(user.permissions) ? user.permissions.filter((permission) => allPermissions.includes(permission)) : ['fila'])
+      };
+    }
+
+    function saveUsers() {
+      users = users.map(normalizeUser);
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    }
+
     async function saveTickets() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
       if (remoteReady) await syncTicketsToDatabase();
@@ -1009,14 +1132,27 @@
     function loadSession() {
       try {
         const raw = localStorage.getItem(SESSION_KEY);
-        return raw ? JSON.parse(raw) : null;
+        if (!raw) return null;
+        const session = JSON.parse(raw);
+        const localUser = users.find((user) => user.login === session.login);
+        return localUser ? {
+          login: localUser.login,
+          name: localUser.name,
+          role: localUser.role,
+          permissions: localUser.permissions
+        } : session;
       } catch {
         return null;
       }
     }
 
     function saveSession(operator) {
-      currentOperator = { login: operator.login, name: operator.name };
+      currentOperator = {
+        login: operator.login,
+        name: operator.name,
+        role: operator.role || 'operador',
+        permissions: operator.role === 'admin' ? allPermissions : (operator.permissions || ['fila'])
+      };
       localStorage.setItem(SESSION_KEY, JSON.stringify(currentOperator));
     }
 
@@ -1031,7 +1167,22 @@
       app.hidden = !isLoggedIn;
       operatorName.textContent = currentOperator?.name || '-';
       updateDatabaseStatus();
-      if (isLoggedIn) render();
+      if (isLoggedIn) {
+        ensureAllowedView();
+        render();
+      }
+    }
+
+    function canAccess(view) {
+      if (!currentOperator) return false;
+      if (currentOperator.role === 'admin') return true;
+      if (!currentOperator.permissions && currentOperator.login === 'admin') return true;
+      return Array.isArray(currentOperator.permissions) && currentOperator.permissions.includes(view);
+    }
+
+    function ensureAllowedView() {
+      if (canAccess(activeView)) return;
+      activeView = allPermissions.find((permission) => permission !== 'admin' && canAccess(permission)) || 'fila';
     }
 
     function updateDatabaseStatus() {
@@ -1148,7 +1299,16 @@
     }
 
     function render() {
+      ensureAllowedView();
       renderChrome();
+      if (activeView === 'admin') {
+        renderAdmin();
+        return;
+      }
+      adminWorkspace.hidden = true;
+      ticketWorkspace.hidden = false;
+      searchInput.disabled = false;
+      statusFilter.disabled = false;
       renderMetrics();
       renderList();
       renderDetail();
@@ -1159,7 +1319,154 @@
       pageTitle.textContent = config.title;
       pageSubtitle.textContent = config.subtitle;
       listTitle.textContent = config.listTitle;
-      navItems.forEach((item) => item.classList.toggle('active', item.dataset.view === activeView));
+      navItems.forEach((item) => {
+        const allowed = canAccess(item.dataset.view);
+        item.hidden = !allowed;
+        item.classList.toggle('active', item.dataset.view === activeView);
+      });
+      document.querySelector('#openNewTicket').hidden = activeView === 'admin' || !canAccess('fila');
+      document.querySelector('#exportCsv').hidden = activeView === 'admin' || !canAccess('resolvidos');
+    }
+
+    function renderAdmin() {
+      ticketWorkspace.hidden = true;
+      adminWorkspace.hidden = false;
+      searchInput.disabled = true;
+      statusFilter.disabled = true;
+      if (!users.some((user) => user.login === selectedUserLogin)) selectedUserLogin = users[0]?.login || '';
+      const selectedUser = users.find((user) => user.login === selectedUserLogin);
+      metricsSection.innerHTML = `
+        <article class="metric"><span>Usuários</span><strong>${users.length}</strong><small>cadastrados neste CRM</small></article>
+        <article class="metric"><span>Admins</span><strong>${users.filter((user) => user.role === 'admin').length}</strong><small>acesso total</small></article>
+        <article class="metric"><span>Operadores</span><strong>${users.filter((user) => user.role !== 'admin').length}</strong><small>com permissões limitadas</small></article>
+        <article class="metric"><span>Banco</span><strong>${remoteReady ? 'ON' : 'Local'}</strong><small>${remoteReady ? 'Supabase conectado' : 'salvo neste navegador'}</small></article>
+      `;
+      adminWorkspace.innerHTML = `
+        <section class="workspace">
+          <article class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Usuários</h2>
+              <span class="badge blue">${users.length} ativos</span>
+            </div>
+            <div class="ticket-list">
+              ${users.map((user) => `
+                <div class="user-card ${user.login === selectedUserLogin ? 'active' : ''}">
+                  <button data-user-login="${escapeAttr(user.login)}" type="button">
+                    <strong>${escapeHtml(user.name)}</strong>
+                    <span>${escapeHtml(user.login)} · ${user.role === 'admin' ? 'Admin' : 'Operador'}</span>
+                  </button>
+                  <div class="badges">
+                    ${user.permissions.slice(0, 4).map((permission) => `<span class="badge">${escapeHtml(permissionLabel(permission))}</span>`).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">${selectedUser ? 'Editar usuário' : 'Novo usuário'}</h2>
+              <button class="btn" id="newUserButton" type="button">Novo</button>
+            </div>
+            <form class="modal-form" id="adminUserForm">
+              <section class="columns">
+                <div class="field"><label>Nome</label><input name="name" required value="${escapeAttr(selectedUser?.name || '')}"></div>
+                <div class="field"><label>Login</label><input name="login" required ${selectedUser ? 'readonly' : ''} value="${escapeAttr(selectedUser?.login || '')}" placeholder="operador"></div>
+              </section>
+              <section class="columns">
+                <div class="field"><label>Senha</label><input name="password" required value="${escapeAttr(selectedUser?.password || '')}" placeholder="senha de acesso"></div>
+                <div class="field">
+                  <label>Perfil</label>
+                  <select name="role">
+                    <option value="operador" ${selectedUser?.role !== 'admin' ? 'selected' : ''}>Operador</option>
+                    <option value="admin" ${selectedUser?.role === 'admin' ? 'selected' : ''}>Admin</option>
+                  </select>
+                </div>
+              </section>
+              <section class="field">
+                <label>Permissões</label>
+                <div class="checks">
+                  ${permissionOptions.map(([value, label]) => `
+                    <label class="check">
+                      <input type="checkbox" name="permissions" value="${value}" ${(selectedUser?.role === 'admin' || selectedUser?.permissions?.includes(value)) ? 'checked' : ''}>
+                      ${escapeHtml(label)}
+                    </label>
+                  `).join('')}
+                </div>
+              </section>
+              <div class="footer-actions">
+                <button class="btn" id="deleteUserButton" type="button" ${!selectedUser ? 'disabled' : ''}>Excluir</button>
+                <button class="btn primary" type="submit">Salvar usuário</button>
+              </div>
+            </form>
+          </article>
+        </section>
+      `;
+      bindAdmin();
+    }
+
+    function bindAdmin() {
+      adminWorkspace.querySelectorAll('[data-user-login]').forEach((button) => {
+        button.addEventListener('click', () => {
+          selectedUserLogin = button.dataset.userLogin;
+          renderAdmin();
+        });
+      });
+      adminWorkspace.querySelector('#newUserButton').addEventListener('click', () => {
+        selectedUserLogin = '';
+        renderAdmin();
+      });
+      adminWorkspace.querySelector('#adminUserForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const login = String(formData.get('login') || '').trim().toLowerCase();
+        const role = String(formData.get('role') || 'operador');
+        const permissions = role === 'admin' ? allPermissions : formData.getAll('permissions');
+        if (!login || !permissions.length) {
+          showToast('Informe login e pelo menos uma permissão.');
+          return;
+        }
+        const user = normalizeUser({
+          login,
+          name: formData.get('name'),
+          password: formData.get('password'),
+          role,
+          permissions
+        });
+        const existingIndex = users.findIndex((item) => item.login === login);
+        if (existingIndex >= 0) {
+          users[existingIndex] = user;
+        } else {
+          users = [...users, user];
+        }
+        saveUsers();
+        if (currentOperator?.login === user.login) saveSession(user);
+        selectedUserLogin = user.login;
+        render();
+        showToast('Usuário salvo');
+      });
+      adminWorkspace.querySelector('#deleteUserButton').addEventListener('click', () => {
+        const user = users.find((item) => item.login === selectedUserLogin);
+        if (!user) return;
+        if (user.login === currentOperator?.login) {
+          showToast('Você não pode excluir o próprio usuário logado.');
+          return;
+        }
+        if (user.role === 'admin' && users.filter((item) => item.role === 'admin').length === 1) {
+          showToast('Mantenha pelo menos um usuário admin.');
+          return;
+        }
+        if (!confirm(`Excluir o usuário ${user.name}?`)) return;
+        users = users.filter((item) => item.login !== user.login);
+        saveUsers();
+        selectedUserLogin = users[0]?.login || '';
+        render();
+        showToast('Usuário excluído');
+      });
+    }
+
+    function permissionLabel(permission) {
+      return permissionOptions.find(([value]) => value === permission)?.[1] || permission;
     }
 
     function filteredTickets() {
@@ -1446,7 +1753,7 @@
         return;
       }
 
-      const operator = operators.find((item) => item.login === data.login.trim().toLowerCase() && item.password === data.password);
+      const operator = users.find((item) => item.login === data.login.trim().toLowerCase() && item.password === data.password);
       if (!operator) {
         loginError.textContent = 'Login ou senha inválidos.';
         loginError.classList.add('show');
@@ -1469,13 +1776,17 @@
     statusFilter.addEventListener('change', render);
     navItems.forEach((item) => {
       item.addEventListener('click', () => {
+        if (!canAccess(item.dataset.view)) {
+          showToast('Usuário sem permissão para esta área.');
+          return;
+        }
         activeView = item.dataset.view;
         if (activeView === 'resolvidos') {
           statusFilter.value = 'Resolvido';
         } else if (statusFilter.value === 'Resolvido') {
           statusFilter.value = 'Todos status';
         }
-        selectedId = filteredTickets()[0]?.id || tickets[0]?.id || null;
+        selectedId = activeView === 'admin' ? selectedId : filteredTickets()[0]?.id || tickets[0]?.id || null;
         render();
       });
     });

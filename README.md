@@ -15,7 +15,9 @@ Versao funcional inicial do CRM de pos-venda da WM Energia Solar.
 - Exportacao CSV
 - Persistencia local via `localStorage` do navegador
 - Tela de login para operador
+- Area Admin para cadastrar usuarios, senhas e permissoes por modulo
 - Integracao preparada para Supabase Auth + tabela `tickets`
+- Schema preparado para tabela `crm_users`
 
 ## Como publicar no Vercel
 
@@ -38,6 +40,8 @@ Logins locais provisórios para teste:
 - `financeiro` / `financeiro2026`
 
 Esses logins locais nao sao seguranca real, porque o app ainda e HTML estatico. Para operacao com dados reais, use Supabase Auth.
+
+O usuario `admin` consegue abrir o menu **Admin > Usuarios e permissoes** para criar operadores locais e limitar acesso por area.
 
 ## Como conectar Supabase
 
