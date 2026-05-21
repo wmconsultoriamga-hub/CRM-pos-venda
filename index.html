@@ -14,6 +14,7 @@
       --muted: #66758a;
       --line: #dfe6ef;
       --brand: #0f6fa8;
+      --brand-dark: #08487f;
       --brand-2: #f5b21b;
       --green: #15975f;
       --orange: #d87811;
@@ -42,7 +43,8 @@
       place-items: center;
       padding: 18px;
       background:
-        linear-gradient(135deg, rgba(15, 111, 168, .92), rgba(12, 23, 38, .96)),
+        radial-gradient(circle at 18% 18%, rgba(245, 178, 27, .26), transparent 30%),
+        linear-gradient(135deg, rgba(8, 72, 127, .95), rgba(12, 23, 38, .97)),
         #0c1726;
     }
 
@@ -61,13 +63,14 @@
     }
 
     .login-head {
-      padding: 22px;
-      background: #0c1726;
+      padding: 24px 22px 22px;
+      background:
+        linear-gradient(135deg, rgba(8, 72, 127, .96), rgba(12, 23, 38, .98));
       color: #fff;
     }
 
     .login-head h1 {
-      margin-top: 14px;
+      margin-top: 16px;
       font-size: 24px;
     }
 
@@ -108,7 +111,8 @@
       top: 0;
       height: 100vh;
       padding: 18px 14px;
-      background: #0c1726;
+      background:
+        linear-gradient(180deg, #0c1726 0%, #0b243d 100%);
       color: white;
       border-right: 1px solid rgba(255, 255, 255, .08);
     }
@@ -130,6 +134,34 @@
       background: linear-gradient(135deg, var(--brand-2), #ffe08a);
       color: #142033;
       font-weight: 900;
+      overflow: hidden;
+      flex: 0 0 auto;
+    }
+
+    .brand-logo {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #fff;
+    }
+
+    .brand-logo-wrap {
+      border: 1px solid rgba(255, 255, 255, .72);
+      background: #fff;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, .16);
+    }
+
+    .login-logo {
+      width: 108px;
+      height: 76px;
+      border-radius: 8px;
+      background: #fff;
+      padding: 7px;
+    }
+
+    .login-logo .brand-logo {
+      object-fit: contain;
     }
 
     .brand strong {
@@ -275,6 +307,11 @@
       border-color: var(--brand);
       color: #fff;
       font-weight: 800;
+    }
+
+    .btn.primary:hover {
+      background: var(--brand-dark);
+      border-color: var(--brand-dark);
     }
 
     .metrics {
@@ -633,7 +670,9 @@
   <section class="login-screen" id="loginScreen">
     <div class="login-box">
       <div class="login-head">
-        <div class="brand-mark">WM</div>
+        <div class="brand-mark brand-logo-wrap login-logo">
+          <img class="brand-logo" src="assets/wm-energia-solar-logo.jpg" alt="WM Energia Solar">
+        </div>
         <h1>CRM Pós-Venda</h1>
         <p>Entre com o operador para acessar a fila de atendimentos.</p>
       </div>
@@ -655,10 +694,12 @@
   <div class="app" id="app" hidden>
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark">WM</div>
+        <div class="brand-mark brand-logo-wrap">
+          <img class="brand-logo" src="assets/wm-energia-solar-logo.jpg" alt="WM Energia Solar">
+        </div>
         <div>
-          <strong>Pós-Venda</strong>
-          <span>Energia Solar</span>
+          <strong>WM Energia Solar</strong>
+          <span>CRM Pós-Venda</span>
         </div>
       </div>
 
