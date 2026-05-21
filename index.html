@@ -734,42 +734,90 @@
     }
 
     @media (max-width: 720px) {
-      main { padding: 12px; }
+      body {
+        background: #edf2f8;
+      }
+      .login-screen {
+        align-items: start;
+        padding: 12px;
+      }
+      .login-box {
+        margin-top: 10px;
+      }
+      .login-head {
+        padding: 18px 16px 16px;
+      }
+      .login-logo {
+        width: 58px;
+        height: 58px;
+      }
+      .login-head h1 {
+        margin-top: 14px;
+        font-size: 21px;
+      }
+      .login-form {
+        gap: 10px;
+        padding: 14px;
+      }
+      main {
+        padding: 10px;
+      }
       .sidebar {
-        padding: 14px 18px 10px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+        padding: 10px;
+        box-shadow: 0 10px 26px rgba(12, 23, 38, .18);
       }
       .brand {
-        padding: 4px 4px 12px;
+        grid-column: 1 / -1;
+        padding: 0 0 8px;
+        min-width: 0;
       }
       .brand-mark {
-        width: 44px;
-        height: 44px;
+        width: 40px;
+        height: 40px;
       }
-      .nav-title {
-        margin: 12px 4px 6px;
-        font-size: 10px;
-      }
-      .nav-item {
-        min-height: 34px;
-        padding: 7px 10px;
+      .brand strong {
         font-size: 14px;
       }
+      .brand span {
+        font-size: 11px;
+      }
+      .nav-title {
+        display: none;
+      }
+      .nav-item {
+        min-height: 32px;
+        margin: 0;
+        padding: 6px 8px;
+        font-size: 12px;
+        line-height: 1.15;
+      }
+      .nav-dot { width: 7px; height: 7px; }
       .sidebar-note {
         display: none;
       }
       .operator-card {
+        grid-column: 1 / -1;
         display: grid;
         grid-template-columns: 1fr auto;
         gap: 2px 12px;
         align-items: center;
-        margin-top: 10px;
-        padding: 10px;
+        margin-top: 0;
+        padding: 8px 10px;
       }
+      .operator-card strong { font-size: 12px; }
+      .operator-card span { font-size: 11px; }
       .operator-card .btn {
         grid-row: 1 / span 3;
         grid-column: 2;
+        height: 30px;
         width: auto;
-        min-width: 86px;
+        min-width: 70px;
         margin-top: 0;
       }
       .topbar,
@@ -778,18 +826,115 @@
       .columns {
         grid-template-columns: 1fr;
       }
+      .topbar {
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      h1 {
+        font-size: 21px;
+      }
+      .subtitle {
+        margin-top: 4px;
+      }
       .actions,
       .footer-actions {
-        justify-content: stretch;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: initial;
       }
       .btn,
       .whatsapp {
         width: 100%;
       }
-      .metrics,
-      .info-grid,
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .metric {
+        min-height: 74px;
+        padding: 10px;
+        box-shadow: none;
+      }
+      .metric span {
+        font-size: 10px;
+      }
+      .metric strong {
+        margin-top: 5px;
+        font-size: 23px;
+      }
+      .metric small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 11px;
+      }
+      .workspace {
+        gap: 10px;
+      }
+      .panel {
+        box-shadow: none;
+      }
+      .panel-head {
+        padding: 10px;
+      }
+      .search {
+        gap: 7px;
+        padding: 9px;
+      }
+      .ticket-list {
+        gap: 7px;
+        padding: 8px;
+        max-height: 48vh;
+      }
+      .ticket {
+        padding: 10px;
+      }
+      .detail {
+        gap: 9px;
+        padding: 10px;
+      }
+      .customer-head {
+        gap: 10px;
+        padding: 11px;
+      }
+      .customer-head h2 {
+        font-size: 18px;
+      }
+      .customer-head p {
+        font-size: 12px;
+      }
+      .info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .info {
+        min-height: 66px;
+        padding: 9px;
+      }
+      .field textarea {
+        min-height: 92px;
+      }
       .checks {
         grid-template-columns: 1fr;
+      }
+      .modal {
+        padding: 8px;
+        place-items: start center;
+      }
+      .modal-box {
+        max-height: calc(100vh - 16px);
+      }
+    }
+
+    @media (max-width: 360px) {
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+      .nav-item {
+        min-height: 31px;
+        font-size: 11px;
       }
     }
   </style>
