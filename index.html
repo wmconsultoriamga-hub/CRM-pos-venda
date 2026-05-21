@@ -69,8 +69,32 @@
       color: #fff;
     }
 
+    .login-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .login-brand-text {
+      display: grid;
+      gap: 2px;
+    }
+
+    .login-brand-text strong {
+      font-size: 15px;
+      line-height: 1.1;
+    }
+
+    .login-brand-text span {
+      color: #f8c766;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
     .login-head h1 {
-      margin-top: 16px;
+      margin: 18px 0 0;
       font-size: 24px;
     }
 
@@ -153,15 +177,16 @@
     }
 
     .login-logo {
-      width: 108px;
-      height: 76px;
+      width: 56px;
+      height: 56px;
       border-radius: 8px;
       background: #fff;
-      padding: 7px;
+      padding: 0;
     }
 
     .login-logo .brand-logo {
-      object-fit: contain;
+      object-fit: cover;
+      object-position: 50% 38%;
     }
 
     .brand strong {
@@ -735,8 +760,14 @@
   <section class="login-screen" id="loginScreen">
     <div class="login-box">
       <div class="login-head">
-        <div class="brand-mark brand-logo-wrap login-logo">
-          <img class="brand-logo" src="assets/wm-energia-solar-logo.jpg" alt="WM Energia Solar">
+        <div class="login-brand">
+          <div class="brand-mark brand-logo-wrap login-logo">
+            <img class="brand-logo" src="assets/wm-energia-solar-logo.jpg" alt="WM Energia Solar">
+          </div>
+          <div class="login-brand-text">
+            <strong>WM Energia Solar</strong>
+            <span>Atendimento</span>
+          </div>
         </div>
         <h1>CRM Pós-Venda</h1>
         <p>Entre com o operador para acessar a fila de atendimentos.</p>
