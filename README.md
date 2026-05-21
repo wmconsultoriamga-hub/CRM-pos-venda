@@ -15,6 +15,7 @@ Versao funcional inicial do CRM de pos-venda da WM Energia Solar.
 - Exportacao CSV
 - Persistencia local via `localStorage` do navegador
 - Tela de login para operador
+- Login exigido sempre que abrir ou recarregar o CRM
 - Area Admin para cadastrar usuarios, senhas e permissoes por modulo
 - Integracao preparada para Supabase Auth + tabela `tickets`
 - Schema preparado para tabela `crm_users`
